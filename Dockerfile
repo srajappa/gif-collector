@@ -1,6 +1,5 @@
-FROM browserless/chrome:arm64
+FROM ghcr.io/puppeteer/puppeteer:latest
 
-# Copy app code
 WORKDIR /app
 COPY requirements.txt .
 RUN pip3 install --no-cache-dir -r requirements.txt

@@ -2,10 +2,9 @@ version: "3.9"
 services:
   recorder:
     platform: linux/arm64
-    build: .
+    build:
+      context: .
     environment:
       WEB_APP_URL: "https://google.com"
-      FPS: "12"
-      GIF_NAME: "walkthrough.gif"
     volumes:
       - ./output:/output
