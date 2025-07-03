@@ -1,0 +1,29 @@
+{
+    "name": "test-web-app",
+    "version": "1.0.0",
+    "description": "Sample web application for GIF generation testing",
+    "main": "server.js",
+    "scripts": {
+        "start": "node server.js",
+        "dev": "nodemon server.js"
+    },
+    "dependencies": {
+        "express": "^4.18.2",
+        "helmet": "^7.0.0",
+        "cors": "^2.8.5",
+        "morgan": "^1.10.0"
+    },
+    "devDependencies": {
+        "nodemon": "^3.0.1"
+    },
+    "engines": {
+        "node": ">=18.0.0"
+    },
+    "keywords": [
+        "test",
+        "demo",
+        "web-app"
+    ],
+    "author": "Your Name",
+    "license": "MIT"
+}

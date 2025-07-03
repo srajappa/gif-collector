@@ -1,0 +1,52 @@
+version: '3.8'
+
+services:
+  gif-generator:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: gif-generator
+    ports:
+      - "3000:3000"
+    environment:
+      - NODE_ENV=development
+      - TEST_APP_URL=http://test-app:3001
+      - OUTPUT_DIR=/app/output
+      - HEADLESS=true
+    volumes:
+      - ./output:/app/output
+      - ./src/config:/app/src/config
+      - /tmp/.X11-unix:/tmp/.X11-unix:rw
+    depends_on:
+      - test-app
+    networks:
+      - gif-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3000/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  test-app:
+    build:
+      context: ./test-app
+      dockerfile: Dockerfile
+    container_name: test-app
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=development
+    networks:
+      - gif-network
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:3001/health" ]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+networks:
+  gif-network:
+    driver: bridge
+
+volumes:
+  output_data:
