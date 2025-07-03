@@ -1,0 +1,16 @@
+
+steps:
+  - description: "Open Dashboard tab"
+    locator_type: id
+    locator_value: "tab-dashboard"
+    pause: 4
+
+  - description: "Open Reports tab"
+    locator_type: id
+    locator_value: "tab-reports"
+    pause: 4
+
+  - description: "Open Settings tab"
+    locator_type: css
+    locator_value: "[data-tab='settings']"
+    pause: 4
