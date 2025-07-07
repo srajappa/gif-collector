@@ -1,32 +1,69 @@
-FROM --platform=linux/amd64 debian:bookworm
+# Dockerfile for Playwright Screencast Environment
+# Using standard Python image with Playwright
 
-ENV DEBIAN_FRONTEND=noninteractive
+# FROM --platform=linux/amd64 python:3.11-slim
+# Dockerfile for Playwright Screencast Environment
+# Using official Playwright image
 
-# Install system dependencies
-RUN apt-get update && \
-    apt-get install -y --no-install-recommends \
-    python3 python3-pip \
-    curl wget unzip gnupg2 ffmpeg xvfb fluxbox \
-    libglib2.0-0 libnss3 libx11-xcb1 libxcomposite1 \
-    libxcursor1 libxdamage1 libxrandr2 libasound2 libatk1.0-0 \
-    libatk-bridge2.0-0 libcups2 libdbus-1-3 libgdk-pixbuf2.0-0 \
-    libxss1 libxshmfence1 xdg-utils fonts-liberation \
-    && apt-get clean && rm -rf /var/lib/apt/lists/*
+FROM  --platform=linux/amd64 mcr.microsoft.com/playwright/python:v1.40.0-jammy
 
-# Install Google Chrome
-RUN curl -fsSL https://dl.google.com/linux/linux_signing_key.pub | gpg --dearmor -o /usr/share/keyrings/google.gpg && \
-    echo "deb [arch=amd64 signed-by=/usr/share/keyrings/google.gpg] http://dl.google.com/linux/chrome/deb/ stable main" > /etc/apt/sources.list.d/google.list && \
-    apt-get update && \
-    apt-get install -y google-chrome-stable && \
-    apt-get clean && rm -rf /var/lib/apt/lists/*
+# Set environment variables
+ENV PYTHONUNBUFFERED=1
+ENV PYTHONPATH=/app
+ENV DISPLAY=:99
 
-# Install ChromeDriver and Python deps
-RUN pip3 install --no-cache-dir selenium webdriver-manager
-
-# Set up your app
+# Set working directory
 WORKDIR /app
-COPY . /app
-RUN chmod +x /app/entrypoint.sh
 
-ENTRYPOINT ["/app/entrypoint.sh"]
+# Install Jupyter and additional Python dependencies
+COPY requirements.txt .
+RUN pip install --no-cache-dir --upgrade pip && \
+    pip install --no-cache-dir -r requirements.txt
 
+# Create necessary directories
+RUN mkdir -p /app/output/screencasts \
+    /app/output/screenshots \
+    /app/logs \
+    /app/notebooks \
+    /app/src \
+    /app/tests \
+    /app/config \
+    /app/scripts
+
+# Copy application files
+COPY src/ ./src/
+COPY notebooks/ ./notebooks/
+COPY config/ ./config/
+COPY scripts/ ./scripts/
+COPY tests/ ./tests/
+
+# Copy and set up entrypoint
+COPY scripts/entrypoint.sh /entrypoint.sh
+RUN chmod +x /entrypoint.sh
+
+# Create non-root user (if not exists) and set permissions
+RUN if ! id "jupyter" &>/dev/null; then \
+    groupadd -r jupyter && \
+    useradd -r -g jupyter -d /home/jupyter -s /bin/bash jupyter && \
+    mkdir -p /home/jupyter && \
+    chown -R jupyter:jupyter /home/jupyter; \
+    fi
+
+# Set proper permissions
+RUN chown -R jupyter:jupyter /app
+
+# Switch to non-root user
+USER jupyter
+
+# Expose Jupyter port
+EXPOSE 8888
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+    CMD curl -f http://localhost:8888/api || exit 1
+
+# Set entrypoint
+ENTRYPOINT ["/entrypoint.sh"]
+
+# Default command
+CMD ["jupyter", "lab", "--ip=0.0.0.0", "--port=8888", "--no-browser", "--allow-root"]
