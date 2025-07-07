@@ -25,12 +25,20 @@ class ScreencastRecorder:
     def __init__(
         self,
         output_dir: str = "output/screencasts",
-        viewport_size: Tuple[int, int] = (1920, 1080),
+        viewport_size: Tuple[int, int] = None,
         video_format: str = "webm"
     ):
         self.output_dir = Path(output_dir)
         self.output_dir.mkdir(parents=True, exist_ok=True)
-        self.viewport_size = viewport_size
+        
+        # Set viewport size with environment variable fallback
+        if viewport_size is None:
+            width = int(os.getenv('DEFAULT_VIEWPORT_WIDTH', '1920'))
+            height = int(os.getenv('DEFAULT_VIEWPORT_HEIGHT', '1080'))
+            self.viewport_size = (width, height)
+        else:
+            self.viewport_size = viewport_size
+            
         self.video_format = video_format
         
         # Playwright instances
@@ -44,6 +52,7 @@ class ScreencastRecorder:
         self.recording_path = None
         
         logger.info(f"Initialized ScreencastRecorder with output: {self.output_dir}")
+        logger.info(f"Viewport size: {self.viewport_size}")
     
     async def setup_browser(
         self,
@@ -83,13 +92,37 @@ class ScreencastRecorder:
             self.recording_name = recording_name or f"screencast_{timestamp}"
             self.recording_path = self.output_dir / self.recording_name
             
+            # Ensure viewport size is properly formatted and validated
+            viewport_width, viewport_height = self.viewport_size
+            
+            # Validate viewport dimensions
+            if not isinstance(viewport_width, int) or not isinstance(viewport_height, int):
+                raise ValueError(f"Invalid viewport dimensions: {self.viewport_size}")
+            
+            if viewport_width <= 0 or viewport_height <= 0:
+                raise ValueError(f"Viewport dimensions must be positive: {self.viewport_size}")
+            
+            logger.info(f"Using viewport: {viewport_width}x{viewport_height}")
+            
             # Create browser context with video recording
-            self.context = await self.browser.new_context(
-                viewport={'width': self.viewport_size[0], 'height': self.viewport_size[1]},
-                record_video_dir=str(self.recording_path),
-                record_video_size=self.viewport_size,
-                user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-            )
+            context_options = {
+                'viewport': {
+                    'width': viewport_width, 
+                    'height': viewport_height
+                },
+                'user_agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+            }
+            
+            # Only add video recording if we have a valid path
+            if self.recording_path:
+                context_options['record_video_dir'] = str(self.recording_path)
+                context_options['record_video_size'] = {
+                    'width': viewport_width,
+                    'height': viewport_height
+                }
+                logger.info(f"Video recording enabled: {self.recording_path}")
+            
+            self.context = await self.browser.new_context(**context_options)
             
             # Create page
             self.page = await self.context.new_page()
@@ -543,6 +576,86 @@ async def quick_screencast(url: str, actions: List[Dict], output_name: str = Non
         await recorder.cleanup()
 
 
+async def test_basic_setup():
+    """Test basic browser setup without video recording"""
+    logger.info("Testing basic browser setup...")
+    
+    try:
+        # Create a simple recorder
+        recorder = ScreencastRecorder()
+        
+        # Start playwright manually without video recording
+        recorder.playwright = await async_playwright().start()
+        recorder.browser = await recorder.playwright.chromium.launch(headless=True)
+        
+        # Test context without video recording
+        recorder.context = await recorder.browser.new_context(
+            viewport={'width': 1920, 'height': 1080}
+        )
+        
+        recorder.page = await recorder.context.new_page()
+        await recorder.page.goto('data:text/html,<h1>Test Page</h1>')
+        
+        content = await recorder.page.content()
+        success = 'Test Page' in content
+        
+        logger.info(f"Basic setup test: {'SUCCESS' if success else 'FAILED'}")
+        return success
+        
+    except Exception as e:
+        logger.error(f"Basic setup test failed: {e}")
+        return False
+    finally:
+        if 'recorder' in locals():
+            await recorder.cleanup()
+
+
+async def test_video_recording():
+    """Test video recording setup specifically"""
+    logger.info("Testing video recording setup...")
+    
+    try:
+        recorder = ScreencastRecorder()
+        
+        # Try the normal setup with video recording
+        page = await recorder.setup_browser(headless=True, recording_name="test_recording")
+        await page.goto('data:text/html,<h1>Video Test</h1>')
+        await page.wait_for_timeout(2000)
+        
+        logger.info("Video recording test: SUCCESS")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Video recording test failed: {e}")
+        return False
+    finally:
+        if 'recorder' in locals():
+            await recorder.cleanup()
+
+
+async def test_video_recording():
+    """Test video recording setup specifically"""
+    logger.info("Testing video recording setup...")
+    
+    try:
+        recorder = ScreencastRecorder()
+        
+        # Try the normal setup with video recording
+        page = await recorder.setup_browser(headless=True, recording_name="test_recording")
+        await page.goto('data:text/html,<h1>Video Test</h1>')
+        await page.wait_for_timeout(2000)
+        
+        logger.info("Video recording test: SUCCESS")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Video recording test failed: {e}")
+        return False
+    finally:
+        if 'recorder' in locals():
+            await recorder.cleanup()
+
+
 # Example usage functions
 async def demo_youtube_trending():
     """Demo: YouTube trending section"""
@@ -581,6 +694,35 @@ async def demo_ecommerce():
         await recorder.cleanup()
 
 
+# Simple test function for debugging
+async def test_basic_setup():
+    """Test basic browser setup without video recording"""
+    recorder = ScreencastRecorder()
+    try:
+        logger.info("Testing basic browser setup...")
+        
+        # First try without video recording
+        recorder.playwright = await async_playwright().start()
+        recorder.browser = await recorder.playwright.chromium.launch(headless=True)
+        
+        # Test context without video recording
+        recorder.context = await recorder.browser.new_context(
+            viewport={'width': 1920, 'height': 1080}
+        )
+        
+        recorder.page = await recorder.context.new_page()
+        await recorder.page.goto('data:text/html,<h1>Test</h1>')
+        
+        logger.info("Basic setup successful!")
+        return True
+        
+    except Exception as e:
+        logger.error(f"Basic setup failed: {e}")
+        return False
+    finally:
+        await recorder.cleanup()
+
+
 if __name__ == "__main__":
-    # Example: Run YouTube demo
-    asyncio.run(demo_youtube_trending())
+    # Example: Run basic test
+    asyncio.run(test_basic_setup())

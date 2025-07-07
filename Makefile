@@ -116,16 +116,16 @@ setup: ## Initialize project structure and configuration
 	$(call print_message,SUCCESS,$(GREEN),Project setup completed!)
 
 validate-env: ## Validate environment configuration
-	$(call print_message,VALIDATE,$(CYAN),Validating environment...)
+	@echo -e "$(CYAN)[VALIDATE]$(NC) Validating environment..."
 	@if [ ! -f .env ]; then \
-		$(call print_message,WARNING,$(YELLOW),Creating .env from template...); \
+		echo -e "$(YELLOW)[WARNING]$(NC) Creating .env from template..."; \
 		cp .env.example .env; \
 	fi
 	@if [ ! -d output/screencasts ]; then \
-		$(call print_message,INFO,$(BLUE),Creating output directories...); \
+		echo -e "$(BLUE)[INFO]$(NC) Creating output directories..."; \
 		mkdir -p output/screencasts output/screenshots logs; \
 	fi
-	$(call print_message,SUCCESS,$(GREEN),Environment validation completed!)
+	@echo -e "$(GREEN)[SUCCESS]$(NC) Environment validation completed!"
 
 check-deps: ## Check system dependencies
 	$(call print_message,CHECK,$(CYAN),Checking system dependencies...)
@@ -156,11 +156,11 @@ rebuild: ## Rebuild Docker images without cache
 #==============================================================================
 
 up: validate-env ## Start all services
-	$(call print_message,START,$(GREEN),Starting Playwright Screencast environment...)
+	@echo "Starting Playwright Screencast environment..."
 	@$(DOCKER_COMPOSE) up -d
 	@sleep 5
 	@$(MAKE) jupyter-url
-	$(call print_message,SUCCESS,$(GREEN),Environment is ready!)
+	@echo "Environment is ready!"
 
 down: ## Stop all services
 	$(call print_message,STOP,$(YELLOW),Stopping all services...)
@@ -288,13 +288,13 @@ demo-custom: ## Run custom demo (requires DEMO_URL and DEMO_ACTIONS environment 
 #==============================================================================
 
 jupyter-token: ## Show Jupyter access token
-	@TOKEN=$$(grep JUPYTER_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo 'docker-screencast-token'); \
-	$(call print_message,TOKEN,$(CYAN),Jupyter Token: $$TOKEN)
+	@TOKEN=$(grep JUPYTER_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo 'docker-screencast-token'); \
+	echo -e "$(CYAN)[TOKEN]$(NC) Jupyter Token: $TOKEN"
 
 jupyter-url: jupyter-token ## Show Jupyter access URL
-	@PORT=$$(grep JUPYTER_PORT .env 2>/dev/null | cut -d'=' -f2 || echo '8888'); \
-	TOKEN=$$(grep JUPYTER_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo 'docker-screencast-token'); \
-	$(call print_message,URL,$(GREEN),Jupyter Lab URL: http://localhost:$$PORT?token=$$TOKEN)
+	@PORT=$(grep JUPYTER_PORT .env 2>/dev/null | cut -d'=' -f2 || echo '8888'); \
+	TOKEN=$(grep JUPYTER_TOKEN .env 2>/dev/null | cut -d'=' -f2 || echo 'docker-screencast-token'); \
+	echo -e "$(GREEN)[URL]$(NC) Jupyter Lab URL: http://localhost:$PORT?token=$TOKEN"
 
 health: ## Check system health
 	$(call print_message,HEALTH,$(CYAN),Checking system health...)

@@ -5,7 +5,7 @@
 # Dockerfile for Playwright Screencast Environment
 # Using official Playwright image
 
-FROM  --platform=linux/amd64 mcr.microsoft.com/playwright/python:v1.40.0-jammy
+FROM  mcr.microsoft.com/playwright/python:v1.40.0-jammy
 
 # Set environment variables
 ENV PYTHONUNBUFFERED=1
